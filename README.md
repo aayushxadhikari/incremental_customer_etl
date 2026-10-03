@@ -4,6 +4,20 @@ PySpark normalizes and validates sealed customer batches. MySQL applies SCD
 Type 2 changes, rejects, the batch checkpoint and the successful audit record in
 one transaction. Replaying a processed batch does not write more history.
 
+## Project overview
+
+This pipeline keeps customer master data current while preserving earlier versions
+for historical analysis.
+
+- Standardizes names, emails, phone numbers, and addresses.
+- Validates customer records and stores rejected rows with reasons.
+- Detects changes using SHA-256 hashes of normalized attributes.
+- Preserves customer history using SCD Type 2.
+- Records processing metrics and batch status for auditing and recovery.
+
+The stack uses Python, PySpark, MySQL, and python-dotenv, with Docker for the
+local runtime and optional Apache Airflow scheduling.
+
 ## Start here
 
 Run all commands from this project directory. The recommended way is Docker:
