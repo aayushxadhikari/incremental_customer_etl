@@ -1,0 +1,36 @@
+# Secrets / local config
+config/db.env
+config/*.local-backup
+/data/
+data/*.csv
+data/*.sql
+data/*.sql.gz
+!data/example.csv
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.venv311/
+venv/
+.eggs/
+*.egg-info/
+
+# Spark
+metastore_db/
+derby.log
+spark-warehouse/
+
+# Airflow runtime artifacts (AIRFLOW_HOME=orchestration/)
+orchestration/airflow.db
+orchestration/airflow.cfg
+orchestration/webserver_config.py
+orchestration/standalone_admin_password.txt
+orchestration/logs/
+orchestration/dags/__pycache__/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store

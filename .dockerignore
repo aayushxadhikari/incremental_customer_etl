@@ -1,0 +1,11 @@
+.git
+.venv
+.venv311
+venv
+**/__pycache__
+config/*.env*
+config/*.local-backup
+.env
+orchestration/logs
+data
+*.sql.gz

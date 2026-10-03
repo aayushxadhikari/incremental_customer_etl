@@ -1,0 +1,48 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: customer_db
+      MYSQL_USER: ${MYSQL_USER:?Set a non-root MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3307}:3306"
+    # Local development: allow the database-scoped migration user to create
+    # ingestion-guard triggers while MySQL binary logging is enabled.
+    command: ["--default-time-zone=+00:00", "--log-bin-trust-function-creators=1"]
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", 'MYSQL_PWD="$${MYSQL_PASSWORD}" mysql --protocol=TCP -h 127.0.0.1 -u "$${MYSQL_USER}" customer_db -e "SELECT 1 FROM customer_work LIMIT 1" >/dev/null 2>&1']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+  etl:
+    profiles: ["tools"]
+    build: .
+    init: true
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_DB: customer_db
+      MYSQL_USER: ${MYSQL_USER:?Set MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}
+      MYSQL_JAR: /app/drivers/mysql-connector-j.jar
+      SPARK_LOCAL_IP: 127.0.0.1
+      SPARK_MASTER: ${SPARK_MASTER:-local[2]}
+      SPARK_SHUFFLE_PARTITIONS: ${SPARK_SHUFFLE_PARTITIONS:-4}
+      JDBC_PARTITIONS: ${JDBC_PARTITIONS:-1}
+      JDBC_FETCH_SIZE: ${JDBC_FETCH_SIZE:-1000}
+      JDBC_BATCH_SIZE: ${JDBC_BATCH_SIZE:-1000}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data:ro
+    command: ["python", "main.py"]
+volumes:
+  mysql_data:

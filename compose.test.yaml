@@ -1,0 +1,7 @@
+services:
+  mysql:
+    ports: !override
+      - "127.0.0.1:13307:3306"
+  etl:
+    environment:
+      ETL_TEST_DATABASE: "1"
