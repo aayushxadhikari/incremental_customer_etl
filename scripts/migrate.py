@@ -1,12 +1,3 @@
-"""Upgrade the original four-table schema in place without deleting data.
-
-    python -m scripts.migrate
-
-Stop old workers and take a backup first. MySQL DDL commits immediately; this
-command checks individual columns/indexes so interrupted upgrades can be rerun.
-Fresh Docker installs already have the current schema.
-"""
-
 from pathlib import Path
 
 from config.settings import Settings
@@ -16,7 +7,7 @@ SCHEMA = Path(__file__).resolve().parents[1] / "sql" / "schema.sql"
 
 
 def statements(text):
-    """Read our SQL files including DELIMITER blocks (not arbitrary SQL)."""
+    """Read my SQL files including DELIMITER blocks."""
     delimiter, buffer = ";", []
     for line in text.splitlines():
         if line.strip().startswith("--") or not line.strip():
@@ -106,7 +97,6 @@ def migrate(settings):
         }.items():
             for field in date_fields:
                 cursor.execute(f"ALTER TABLE {table} MODIFY {field} DATETIME(6) NULL")
-        # Match Spark's case-sensitive ID semantics. Existing hashes stay version 1.
         for table in ("customer_master", "customer_staging", "customer_rejects", "etl_run_log"):
             cursor.execute(f"ALTER TABLE {table} CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_bin")
         cursor.execute("SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA=%s AND TABLE_NAME='customer_master' AND CONSTRAINT_TYPE='CHECK'", (settings.mysql_db,))

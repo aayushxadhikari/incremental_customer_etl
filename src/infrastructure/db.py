@@ -21,8 +21,6 @@ def get_connection(settings: Settings):
     )
     try:
         with conn.cursor() as cursor:
-            # Spark commits work on other connections while this connection
-            # holds the advisory lock; subsequent reads must see that work.
             cursor.execute("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
         yield conn
         conn.commit()

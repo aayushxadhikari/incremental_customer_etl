@@ -1,10 +1,3 @@
-"""Application configuration loaded from environment variables.
-
-All runtime configuration lives here so the rest of the codebase never reads
-environment variables directly. Call ``Settings.from_env()`` once at startup
-and pass the resulting object down to the layers that need it.
-"""
-
 import os
 from pathlib import Path
 from dataclasses import dataclass, field
