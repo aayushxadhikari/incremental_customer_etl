@@ -5,7 +5,6 @@ config/*.local-backup
 data/*.csv
 data/*.sql
 data/*.sql.gz
-!data/example.csv
 .env
 
 # Python

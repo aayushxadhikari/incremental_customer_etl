@@ -26,11 +26,6 @@ The image downloads MySQL Connector/J 26.7.0 from Maven Central and verifies its
 SHA-256 checksum. For local Python or Airflow runs, first run
 `python -m scripts.download_jdbc`. Downloaded jars are ignored by Git.
 
-Your current `config/db.env` is already configured for the Docker database.
-Keep this file; do not overwrite it with the example. The older
-`config/db.env.local-backup` is unused by the application. It is only a copy of
-previous connection settings, not a database backup.
-
 The normal workflow is: start MySQL → ingest a CSV → run the ETL → inspect results.
 Running the ETL without any READY batches has no new customer data to process.
 
@@ -59,26 +54,17 @@ docker compose --env-file config/db.env up -d --wait mysql
 docker compose --env-file config/db.env build etl
 ```
 
-4. Load the included sample and run the pipeline:
+4. Place a CSV delivery in `data/` and run the pipeline (data files are not included):
 
 ```bash
 docker compose --env-file config/db.env run --rm etl \
-  python -m scripts.ingest data/example.csv --source-key example-delivery-001
+  python -m scripts.ingest data/customers.csv --source-key delivery-001
 docker compose --env-file config/db.env run --rm etl
 ```
 
 5. Inspect the results using the MySQL commands below.
 
-For your own delivery, place a CSV in `data/` and run:
-
-```bash
-docker compose --env-file config/db.env run --rm etl \
-  python -m scripts.ingest data/customers.csv --source-key customers-delivery-002
-docker compose --env-file config/db.env run --rm etl
-```
-
-Replace the filename and delivery key each time you receive a new delivery.
-To retry the same delivery, keep its original key.
+Use a unique source key for each delivery. Reuse the same key when retrying it.
 
 On later runs, start MySQL, ingest your new delivery, and run ETL again; rebuilding
 is needed when code or dependencies change.
@@ -161,8 +147,6 @@ prevents replaying a completed batch. Investigate the audit and batch together.
 
 ## Existing databases
 
-The Docker database is separate from a previous host MySQL instance. Back up and
-export/import that instance before switching if you need its existing history.
 The migration command upgrades the original four-table project schema without
 deleting history. Stop old workers and back up first: MySQL ALTER TABLE commits
 immediately and can lock/rebuild tables.
@@ -189,16 +173,11 @@ READY legacy batch. Because old staging lacks source ordering, conflicting
 duplicate IDs in that batch are rejected for inspection. Source timestamps for
 legacy staging are migration time, not original business event time.
 
-If this workspace has `config/db.env.local-backup`, it contains the connection
-settings from before Docker setup and is gitignored. Do not publish it. The old
-database's data is not part of that backup.
-
 ## Local Python and Airflow
 
-Use Python 3.11 and Java 17+ for the shared ETL/Airflow environment. The previous
-Python 3.13 virtualenv is not a supported target for pinned Airflow 2.10.4.
+Use Python 3.11 and Java 17+ for the ETL/Airflow environment.
 
-Start the Docker MySQL service first if using the current settings:
+Start MySQL before running the pipeline:
 
 ```bash
 docker compose --env-file config/db.env up -d --wait mysql
@@ -210,16 +189,17 @@ Then install dependencies and run locally:
 python3.11 -m venv .venv311
 source .venv311/bin/activate
 pip install -r requirements.txt
-python -m scripts.ingest data/example.csv --source-key example-delivery-001
+python -m scripts.download_jdbc
+python -m scripts.ingest data/customers.csv --source-key delivery-001
 python main.py
 ```
 
-Ensure `JAVA_HOME` points to Java 17+, and retain the valid host `MYSQL_JAR` path.
+Ensure `JAVA_HOME` points to Java 17+, and set `MYSQL_JAR` to the downloaded driver path.
 Configuration resolves relative jar paths from the project root. Environment
 variables override the dotenv file, including for container workers.
 
 See [orchestration/README.md](orchestration/README.md) for Airflow setup. The DAG
-runs daily at 02:00 UTC (07:45 Nepal), returns aggregate committed-batch metrics
+runs daily at 02:00 UTC, returns aggregate committed-batch metrics
 to XCom, and retries safely through the same database protocol. Airflow's own
 metadata database is separate from this customer database.
 
@@ -255,7 +235,7 @@ docker compose -p customer-etl-test -f compose.yaml -f compose.test.yaml \
   --env-file config/db.env build etl
 docker compose -p customer-etl-test -f compose.yaml -f compose.test.yaml \
   --env-file config/db.env run --rm etl python -m unittest discover -v
-# Removes ONLY the disposable test project's data:
+# Remove the disposable test database:
 docker compose -p customer-etl-test -f compose.yaml -f compose.test.yaml \
   --env-file config/db.env down -v
 ```
@@ -275,9 +255,29 @@ src/etl/              batch extraction, transformations and work-table writes
 src/infrastructure/   Spark, JDBC and native MySQL connection factories
 src/repositories/     transactional merge and run audits
 src/pipeline.py       batch loop, recovery and cleanup
-scripts/              CSV ingestion and legacy migration
+scripts/              ingestion, migration and JDBC driver download
+dashboard/            Streamlit monitoring and customer history
 sql/schema.sql        fresh schema, constraints and ingestion guards
 tests/                transformation and isolated database integration tests
 orchestration/        optional Airflow DAG
 compose.yaml          persistent MySQL and one-shot ETL runner
 ```
+
+## Browser dashboard
+
+The Streamlit dashboard shows current customers, SCD2 history, recent pipeline
+runs, delivery batches and rejection reasons. It reads MySQL using the existing
+`config/db.env`; Spark and the JDBC jar are not needed for the dashboard.
+
+With Docker Desktop running, start MySQL and launch the dashboard from the project root:
+
+```bash
+docker compose --env-file config/db.env up -d --wait mysql
+.venv/bin/python -m pip install -r dashboard/requirements.txt
+.venv/bin/python -m streamlit run dashboard/app.py --server.address 127.0.0.1
+```
+
+Open http://localhost:8501 in your browser. If you do not have `.venv`, create it
+with `python3 -m venv .venv` first. Run ingestion and ETL as usual, then click
+**Refresh data** to see updated results. An empty database shows empty states;
+connection failures show setup guidance. All displayed timestamps are UTC.

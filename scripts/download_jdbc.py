@@ -1,4 +1,4 @@
-"""Download the pinned MySQL driver without storing it in Git."""
+"""Download the pinned MySQL driver"""
 import hashlib
 from pathlib import Path
 from urllib.request import urlopen
