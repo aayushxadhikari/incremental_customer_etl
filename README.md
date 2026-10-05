@@ -22,6 +22,9 @@ local runtime and optional Apache Airflow scheduling.
 
 Run all commands from this project directory. The recommended way is Docker:
 it supplies MySQL, Python, Java, and Spark without installing them separately.
+The image downloads MySQL Connector/J 26.7.0 from Maven Central and verifies its
+SHA-256 checksum. For local Python or Airflow runs, first run
+`python -m scripts.download_jdbc`. Downloaded jars are ignored by Git.
 
 Your current `config/db.env` is already configured for the Docker database.
 Keep this file; do not overwrite it with the example. The older

@@ -9,3 +9,8 @@ config/*.local-backup
 orchestration/logs
 data
 *.sql.gz
+
+drivers/*.jar
+.env.*
+*.pem
+*.key

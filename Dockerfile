@@ -10,6 +10,6 @@ COPY scripts/ scripts/
 COPY tests/ tests/
 COPY sql/ sql/
 COPY main.py ./
-COPY drivers/mysql-connector-j.jar drivers/
+RUN python -m scripts.download_jdbc
 ENV PYTHONUNBUFFERED=1 PYSPARK_PYTHON=python
 CMD ["python", "main.py"]

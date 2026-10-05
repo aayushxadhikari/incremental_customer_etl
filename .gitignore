@@ -34,3 +34,12 @@ orchestration/dags/__pycache__/
 .idea/
 .vscode/
 .DS_Store
+
+# Downloaded dependencies and additional local secrets
+drivers/*.jar
+drivers/*.jar.part
+.env.*
+!.env.example
+config/*.env
+*.pem
+*.key
